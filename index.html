@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard Ejecutivo · Healthcheck Argentina v2</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f7fb;
+    --card: #ffffff;
+    --ink: #152033;
+    --muted: #61708a;
+    --line: #dbe3ef;
+    --blue: #183a72;
+    --blue2: #2f63b8;
+    --blue3: #eaf1fb;
+    --shadow: 0 14px 40px rgba(20, 40, 90, 0.08);
+    --radius: 22px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body {
+    font-family: Inter, Arial, Helvetica, sans-serif;
+    background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+    color: var(--ink);
+  }
+  .wrap {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 24px 20px 90px;
+  }
+  .hero {
+    background: linear-gradient(135deg, #12284d 0%, #1d427d 100%);
+    color: white;
+    padding: 26px 28px;
+    border-radius: 28px;
+    box-shadow: var(--shadow);
+  }
+  .title {
+    margin: 0 0 6px;
+    font-size: 30px;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+  .subtitle {
+    margin: 0;
+    max-width: 980px;
+    color: rgba(255,255,255,.88);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .top-grid {
+    display:grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 18px;
+    margin-top: 18px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid rgba(22,43,76,.06);
+    box-shadow: var(--shadow);
+  }
+  .filters-card, .summary-card, .carousel-card, .audit-card {
+    padding: 18px;
+  }
+  .section-title {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+  }
+  .filter-grid {
+    display:grid;
+    grid-template-columns: repeat(6, minmax(0,1fr));
+    gap: 12px;
+  }
+  label {
+    display:block;
+    margin-bottom:8px;
+    font-size:12px;
+    font-weight:700;
+    color: var(--muted);
+    letter-spacing:.03em;
+  }
+  select,
+  input[type="date"] {
+    width:100%;
+    min-height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background:#fff;
+    padding: 10px 12px;
+    font-size:14px;
+    color:var(--ink);
+  }
+  .kpis {
+    display:grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 14px;
+    padding: 18px;
+    align-items: stretch;
+  }
+  .kpi {
+    background: #fff;
+    border-radius: 18px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 160px;
+  }
+  .kpi-label {
+    font-size: 14px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.25;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .kpi-value {
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--blue);
+    margin-top: 0;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .sticky-bar {
+    position: sticky;
+    top: 8px;
+    z-index: 20;
+    margin-top: 18px;
+    padding: 14px 16px;
+    display:flex;
+    gap: 12px;
+    align-items:center;
+    flex-wrap:wrap;
+    background: rgba(255,255,255,.94);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(22,43,76,.08);
+    border-radius: 16px;
+    box-shadow: 0 10px 28px rgba(18,40,77,.10);
+  }
+  .sticky-title {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+  .chip-wrap {
+    flex:1;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    min-width: 0;
+  }
+  .chip {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background: var(--blue3);
+    color: var(--blue);
+    border: 1px solid #c7d8f3;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight:700;
+  }
+  .chip button {
+    border:none;
+    background:transparent;
+    color: var(--blue);
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+    padding:0;
+  }
+  .clear-btn {
+    border:none;
+    background: var(--blue);
+    color:white;
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-weight: 800;
+    cursor:pointer;
+  }
+  .main-grid {
+    margin-top: 18px;
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 18px;
+  }
+  .chart-card {
+    padding: 18px;
+  }
+  .chart-title {
+    margin: 0;
+    font-size: 20px;
+    color: var(--blue);
+    letter-spacing:-0.02em;
+  }
+  .chart-base {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight:700;
+  }
+  .chart-canvas-wrap {
+    height: 310px;
+    position: relative;
+    margin-top: 10px;
+  }
+  .option-list {
+    display:grid;
+    gap:10px;
+    margin-top: 14px;
+  }
+  .option-item {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    padding: 11px 12px;
+    border:1px solid var(--line);
+    border-radius: 16px;
+    cursor:pointer;
+    background:#fff;
+    transition: all .15s ease;
+  }
+  .option-item:hover {
+    border-color: #b7ccec;
+    background: #fbfdff;
+  }
+  .option-item.active {
+    background: var(--blue3);
+    border-color: #b7ccec;
+  }
+  .option-main {
+    display:flex;
+    gap:10px;
+    align-items:center;
+    min-width: 0;
+  }
+  .dot {
+    width: 16px;
+    height: 16px;
+    border-radius:50%;
+    flex: 0 0 16px;
+  }
+  .option-label {
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .option-metrics {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 700;
+    text-align:right;
+    white-space: nowrap;
+  }
+  .insight {
+    margin-top: 12px;
+    border:1px solid #cfdbef;
+    background: linear-gradient(180deg, #f8fbff 0%, #f1f7ff 100%);
+    border-radius: 16px;
+    padding: 14px;
+    color: #27405e;
+    line-height: 1.6;
+    font-size: 14px;
+  }
+  .full-stack {
+    display:grid;
+    grid-template-columns: 1fr;
+    gap:18px;
+    margin-top: 18px;
+  }
+  .carousel-card {
+    width:100%;
+    overflow:hidden;
+  }
+  .carousel-head {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-bottom: 14px;
+  }
+
+  .carousel-actions {
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .secondary-btn {
+    border: 1px solid var(--line);
+    background: white;
+    color: var(--blue);
+    border-radius: 999px;
+    padding: 10px 14px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .carousel-shell {
+    position: relative;
+    padding: 0 56px;
+  }
+  .carousel-track {
+    display:grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(240px, 1fr);
+    gap: 14px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #cfdbef transparent;
+  }
+  .carousel-track::-webkit-scrollbar {
+    height: 10px;
+  }
+  .carousel-track::-webkit-scrollbar-thumb {
+    background: #cfdbef;
+    border-radius: 999px;
+  }
+  .photo-card {
+    position:relative;
+    border-radius: 18px;
+    overflow:hidden;
+    border:1px solid var(--line);
+    background: #eef3fb;
+    height: 260px;
+    cursor:pointer;
+  }
+  .photo-inner {
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#eef3fb;
+  }
+  .photo-card img {
+    max-width:100%;
+    max-height:100%;
+    width:auto;
+    height:auto;
+    object-fit: contain;
+    transition: transform .18s ease;
+  }
+  .photo-card img {
+    image-orientation: from-image;
+  }
+  .photo-card.manual-rot-90 img,
+  .lightbox-body img.manual-rot-90 {
+    transform: rotate(90deg) scale(0.78);
+    transform-origin: center center;
+  }
+  .photo-card.manual-rot-180 img,
+  .lightbox-body img.manual-rot-180 {
+    transform: rotate(180deg);
+    transform-origin: center center;
+  }
+  .photo-card.manual-rot-270 img,
+  .lightbox-body img.manual-rot-270 {
+    transform: rotate(270deg) scale(0.78);
+    transform-origin: center center;
+  }
+  .photo-overlay {
+    position:absolute;
+    inset: auto 0 0 0;
+    padding: 14px;
+    background: linear-gradient(180deg, rgba(10,18,35,0) 0%, rgba(10,18,35,.78) 100%);
+    color:white;
+    opacity:0;
+    transition: opacity .18s ease;
+  }
+  .photo-card:hover .photo-overlay {
+    opacity:1;
+  }
+  .photo-title {
+    font-size: 14px;
+    font-weight:800;
+    margin-bottom:4px;
+  }
+  .photo-meta {
+    font-size: 12px;
+    opacity:.92;
+  }
+  .nav-btn {
+    position:absolute;
+    top:50%;
+    transform: translateY(-50%);
+    width: 42px;
+    height: 42px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:white;
+    color: var(--blue);
+    font-size:22px;
+    box-shadow: 0 6px 16px rgba(15,30,60,.08);
+    cursor:pointer;
+    z-index:2;
+  }
+  .nav-btn.prev { left: 0; }
+  .nav-btn.next { right: 0; }
+  .summary-card {
+    width:100%;
+  }
+  .summary-block {
+    padding:16px;
+    border-radius:16px;
+    border:1px solid var(--line);
+    background: linear-gradient(180deg, #fff 0%, #f9fbff 100%);
+    line-height:1.7;
+    font-size: 15px;
+    color:#233650;
+  }
+  .footer-note {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .admin-fab {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    width: 48px;
+    height: 48px;
+    border:none;
+    border-radius:50%;
+    background: #12284d;
+    color:white;
+    font-size: 20px;
+    box-shadow: 0 16px 26px rgba(18,40,77,.25);
+    cursor:pointer;
+    z-index: 40;
+  }
+  .drawer {
+    position: fixed;
+    right: 18px;
+    bottom: 78px;
+    width: min(420px, calc(100vw - 24px));
+    background: white;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    box-shadow: 0 18px 50px rgba(18,40,77,.18);
+    padding: 16px;
+    z-index: 39;
+  }
+  .drawer.hidden {
+    display:none;
+  }
+  .drawer-title {
+    margin: 0 0 10px;
+    font-size: 16px;
+    color: var(--blue);
+    font-weight: 800;
+  }
+  .drawer-sub {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+  .upload-btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    border:none;
+    background: var(--blue);
+    color:white;
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-weight:800;
+    cursor:pointer;
+  }
+  .audit-list {
+    margin-top: 14px;
+    display:grid;
+    gap:8px;
+  }
+  .audit-row {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f8fbff;
+    border: 1px solid #d9e5f4;
+    font-size: 13px;
+    color: #29415f;
+    line-height: 1.5;
+  }
+  .hidden {
+    display:none !important;
+  }
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(8,15,28,.84);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 24px;
+    z-index: 100;
+  }
+  .lightbox.hidden { display:none; }
+  .lightbox-inner {
+    width: min(1200px, 96vw);
+    max-height: 90vh;
+    background:white;
+    border-radius: 22px;
+    overflow:hidden;
+    box-shadow: 0 25px 60px rgba(0,0,0,.25);
+  }
+  .lightbox-top {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .lightbox-title {
+    font-size: 15px;
+    font-weight:800;
+    color: var(--blue);
+  }
+  .lightbox-actions {
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .lightbox-actions a, .lightbox-actions button {
+    border:1px solid var(--line);
+    background:#fff;
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-weight: 700;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .lightbox-body {
+    background:#0f1728;
+    padding: 18px;
+    text-align:center;
+  }
+  .lightbox-body img {
+    max-width:100%;
+    max-height: 76vh;
+    object-fit: contain;
+  }
+  
+  #hide-photo {
+    border-color: #f1c7c7;
+    color: #a12b2b;
+    background: #fff7f7;
+  }
+
+  @media (max-width: 1100px) {
+    .top-grid, .main-grid { grid-template-columns: 1fr; }
+    .filter-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  }
+  @media (max-width: 720px) {
+    .wrap { padding: 12px 12px 84px; }
+    .hero { padding: 18px 16px; border-radius: 20px; }
+    .title { font-size: 22px; }
+    .subtitle { font-size: 13px; line-height: 1.45; }
+
+    .top-grid, .main-grid, .full-stack { grid-template-columns: 1fr; gap: 14px; }
+    .filter-grid, .kpis { grid-template-columns: 1fr; }
+
+    .filters-card, .chart-card, .carousel-card, .summary-card { padding: 16px; border-radius: 18px; }
+
+    .kpi { padding: 16px; }
+    .kpi-value { font-size: 28px; }
+
+    .sticky-bar {
+      top: 6px;
+      align-items:flex-start;
+      padding: 12px 14px;
+      gap: 10px;
+    }
+    .sticky-title {
+      width:100%;
+    }
+    .chip-wrap {
+      width:100%;
+      order:2;
+    }
+    .clear-btn {
+      width:100%;
+      order:3;
+      justify-content:center;
+    }
+
+    .chart-title { font-size: 18px; }
+    .chart-canvas-wrap { height: 250px; }
+
+    .option-item {
+      flex-direction:column;
+      align-items:flex-start;
+      gap: 6px;
+    }
+    .option-metrics {
+      white-space:normal;
+      text-align:left;
+      padding-left: 26px;
+    }
+
+    .carousel-head {
+      flex-direction:column;
+      align-items:flex-start;
+    }
+    .carousel-actions {
+      width:100%;
+      flex-wrap:wrap;
+    }
+    .secondary-btn {
+      width:100%;
+      justify-content:center;
+      text-align:center;
+    }
+    .carousel-shell {
+      padding: 0 44px;
+    }
+    .carousel-track {
+      grid-auto-columns: 86%;
+      gap: 12px;
+    }
+    .photo-card {
+      height: 240px;
+    }
+    .nav-btn {
+      width: 38px;
+      height: 38px;
+      font-size: 20px;
+    }
+    .summary-block {
+      font-size: 14px;
+      padding: 14px;
+    }
+    select {
+      font-size: 16px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <h1 class="title">Dashboard Ejecutivo · Relevamiento Healthcheck Argentina</h1>
+    <p class="subtitle">Tablero ejecutivo con filtros cruzados, auditoría automática al importar y normalización de evidencia fotográfica.</p>
+  </section>
+
+  <section class="top-grid">
+    <div class="card filters-card">
+      <h2 class="section-title">Filtros</h2>
+      <div class="filter-grid">
+        <div>
+          <label for="filter-store">Tienda</label>
+          <select id="filter-store"></select>
+        </div>
+        <div>
+          <label for="filter-base">Base de tienda</label>
+          <select id="filter-base"></select>
+        </div>
+        <div>
+          <label for="filter-zone">Zona</label>
+          <select id="filter-zone"></select>
+        </div>
+        <div>
+          <label for="filter-type">Tipo de restaurante</label>
+          <select id="filter-type"></select>
+        </div>
+        <div>
+          <label for="filter-date-from">Fecha desde</label>
+          <input type="date" id="filter-date-from" />
+        </div>
+        <div>
+          <label for="filter-date-to">Fecha hasta</label>
+          <input type="date" id="filter-date-to" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card kpis">
+      <div class="kpi">
+        <div class="kpi-label">Tiendas Base Uber</div>
+        <div class="kpi-value" id="kpi-base">-</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Tiendas que no se encontraron o no existen</div>
+        <div class="kpi-value" id="kpi-missing">-</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Tiendas HC</div>
+        <div class="kpi-value" id="kpi-hc">-</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Restaurantes relevados</div>
+        <div class="kpi-value" id="kpi-total">-</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sticky-bar">
+    <div class="sticky-title">Filtros activos</div>
+    <div class="chip-wrap" id="active-filters"></div>
+    <button class="clear-btn" id="clear-all">Limpiar todos</button>
+  </div>
+
+  <section class="main-grid" id="charts-grid"></section>
+
+  <section class="full-stack">
+    <div class="card carousel-card">
+      <div class="carousel-head">
+        <div>
+          <h3 class="chart-title" style="margin-bottom:4px">Evidencia fotográfica</h3>
+          <div class="chart-base">Carrusel dinámico según la selección actual</div>
+        </div>
+        <div class="carousel-actions">
+          <button class="secondary-btn" id="download-all-photos" type="button">Descargar todas</button>
+        </div>
+      </div>
+      <div class="carousel-shell">
+        <button class="nav-btn prev" id="photos-prev" aria-label="Anterior">‹</button>
+        <div class="carousel-track" id="photos-track"></div>
+        <button class="nav-btn next" id="photos-next" aria-label="Siguiente">›</button>
+      </div>
+    </div>
+
+    <div class="card summary-card">
+      <h3 class="chart-title" style="margin-bottom:12px">Conclusión general</h3>
+      <div class="summary-block" id="general-conclusion"></div>
+      <div class="footer-note">Fuente: archivo de relevamiento provisto por fuerza en campo de Healthcheck Argentina.</div>
+    </div>
+  </section>
+</div>
+
+<input type="file" id="excel-input" class="hidden" accept=".xlsx,.xls" />
+<button class="admin-fab" id="admin-fab" title="Importar Excel y auditar">⚙</button>
+
+<div class="drawer hidden" id="admin-drawer">
+  <h3 class="drawer-title">Importación y auditoría</h3>
+  <div class="drawer-sub">Al importar un archivo nuevo, el sistema actualiza la versión publicada del dashboard para todos los usuarios. La carga audita las columnas J, L y W y revisa la evidencia fotográfica antes de publicar la última versión.</div>
+  <button class="upload-btn" id="upload-btn">Importar Excel</button>
+  <div class="audit-list" id="audit-list"></div><div class="drawer-sub" id="storage-status" style="margin-top:10px;"></div>
+</div>
+
+<div class="lightbox hidden" id="lightbox">
+  <div class="lightbox-inner">
+    <div class="lightbox-top">
+      <div class="lightbox-title" id="lightbox-title"></div>
+      <div class="lightbox-actions">
+        <a href="#" target="_blank" rel="noopener noreferrer" id="open-original">Abrir original</a>
+        <button id="rotate-photo">Girar foto</button>
+        <button id="hide-photo">Eliminar del carrusel</button>
+        <button id="close-lightbox">Cerrar</button>
+      </div>
+    </div>
+    <div class="lightbox-body">
+      <img id="lightbox-image" src="" alt="Foto ampliada" />
+    </div>
+  </div>
+</div>
+
+<script>
+const embeddedData = [];
+
+const filtersConfig = [
+  { id: "filter-store", field: "store", label: "Tienda" },
+  { id: "filter-base", field: "baseStore", label: "Base de tienda" },
+  { id: "filter-zone", field: "zone", label: "Zona" },
+  { id: "filter-type", field: "restaurantType", label: "Tipo de restaurante" }
+];
+
+const chartConfigs = [
+  { field: "restaurantType", title: "Tipo de restaurante", multi: false },
+  { field: "contactReached", title: "¿Se logró hablar con alguien responsable?", multi: false },
+  { field: "flyerDelivered", title: "¿Se entregó el flyer?", multi: false },
+  { field: "proposalUnderstood", title: "¿Entendió la propuesta?", multi: false },
+  { field: "competition", title: "Trabaja con la competencia", multi: true },
+  { field: "competitionMaterial", title: "Material de comunicación de la competencia", multi: true }
+];
+
+const prettyNames = {
+  restaurantType: "Tipo de restaurante",
+  contactReached: "Contacto con responsable",
+  flyerDelivered: "Entrega de flyer",
+  proposalUnderstood: "Comprensión de la propuesta",
+  competition: "Competencia",
+  competitionMaterial: "Material competencia",
+  store: "Tienda",
+  baseStore: "Base de tienda",
+  zone: "Zona"
+};
+
+const palette = ["#183a72","#2c5aac","#4d7cd6","#7ca5ef","#b5ccf6","#dce7fb","#7e5bef","#4f8fba","#e2b04d","#76a56f","#d97b66","#9c6ade"];
+let auditSummary = {
+  textFixesJ: 0,
+  textFixesL: 0,
+  textFixesW: 0,
+  importedRows: embeddedData.length,
+  photoColumnsReviewed: "M, P, T, U y V",
+  validPhotos: 0,
+  invalidPhotos: 0
+};
+let rawData = normalizeRecords(embeddedData);
+let charts = {};
+let activeFilters = {};
+
+function normalizeText(v) {
+  if (v === null || v === undefined) return "";
+  return String(v).trim();
+}
+
+function titleCaseEs(str) {
+  return normalizeText(str)
+    .toLowerCase()
+    .split(/\s+/)
+    .map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : "")
+    .join(" ");
+}
+
+function sentenceCaseEs(str) {
+  const clean = normalizeText(str)
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/([,.;:!?])(\S)/g, "$1 $2")
+    .trim();
+  if (!clean) return "";
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
+function auditTextColumns(rec) {
+  const originalJ = rec.store || "";
+  const originalL = rec.otherType || "";
+  const originalW = rec.comments || "";
+
+  rec.store = titleCaseEs(originalJ);
+  rec.otherType = titleCaseEs(originalL);
+  rec.comments = sentenceCaseEs(originalW);
+
+  if (rec.store !== originalJ) auditSummary.textFixesJ += 1;
+  if (rec.otherType !== originalL) auditSummary.textFixesL += 1;
+  if (rec.comments !== originalW) auditSummary.textFixesW += 1;
+
+  return rec;
+}
+
+function isPhoto(value) {
+  const v = normalizeText(value);
+  return !!(v && !/^no hay foto$/i.test(v) && /^https?:\/\//i.test(v) && v.length > 15);
+}
+
+function splitMulti(value) {
+  const v = normalizeText(value);
+  if (!v) return [];
+  if (/^no$/i.test(v)) return ["No"];
+  return v.split(/\s*,\s*/).map(x => x.trim()).filter(Boolean);
+}
+
+
+function excelSerialToDate(serial) {
+  const n = Number(serial);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const utcDays = Math.floor(n - 25569);
+  const utcValue = utcDays * 86400;
+  const fractionalDay = n - Math.floor(n) + 0.0000001;
+  let totalSeconds = Math.floor(86400 * fractionalDay);
+  const dateInfo = new Date(utcValue * 1000);
+  const year = dateInfo.getUTCFullYear();
+  const month = dateInfo.getUTCMonth();
+  const day = dateInfo.getUTCDate();
+  const hours = Math.floor(totalSeconds / 3600);
+  totalSeconds -= hours * 3600;
+  const minutes = Math.floor(totalSeconds / 60);
+  return new Date(year, month, day, hours, minutes, 0);
+}
+
+function excelSerialToDate(serial) {
+  const n = Number(serial);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const utcDays = Math.floor(n - 25569);
+  const utcValue = utcDays * 86400;
+  const fractionalDay = n - Math.floor(n) + 0.0000001;
+  let totalSeconds = Math.floor(86400 * fractionalDay);
+  const dateInfo = new Date(utcValue * 1000);
+  const year = dateInfo.getUTCFullYear();
+  const month = dateInfo.getUTCMonth();
+  const day = dateInfo.getUTCDate();
+  const hours = Math.floor(totalSeconds / 3600);
+  totalSeconds -= hours * 3600;
+  const minutes = Math.floor(totalSeconds / 60);
+  return new Date(year, month, day, hours, minutes, 0);
+}
+
+function parseAnyDate(value) {
+  const raw = normalizeText(value);
+  if (!raw) return null;
+
+  const serialDate = excelSerialToDate(raw);
+  if (serialDate && !Number.isNaN(serialDate.getTime())) return serialDate;
+
+  const direct = new Date(raw);
+  if (!Number.isNaN(direct.getTime())) return direct;
+
+  const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+  if (m) {
+    const [, d, mo, y, hh='00', mm='00'] = m;
+    const dt = new Date(Number(y), Number(mo)-1, Number(d), Number(hh), Number(mm), 0);
+    if (!Number.isNaN(dt.getTime())) return dt;
+  }
+  return null;
+}
+
+function formatDateInputValue(dateObj) {
+  if (!dateObj || Number.isNaN(dateObj.getTime())) return "";
+  const yyyy = dateObj.getFullYear();
+  const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const dd = String(dateObj.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatDateDisplay(value) {
+  const dt = parseAnyDate(value);
+  if (!dt) return normalizeText(value) || "Sin fecha";
+  const dd = String(dt.getDate()).padStart(2, "0");
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const yyyy = dt.getFullYear();
+  const hh = String(dt.getHours()).padStart(2, "0");
+  const mi = String(dt.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+}
+
+function dateInRange(displayDate, fromValue, toValue) {
+  const dt = parseAnyDate(displayDate);
+  if (!dt) return false;
+  if (fromValue) {
+    const from = new Date(fromValue + "T00:00:00");
+    if (dt < from) return false;
+  }
+  if (toValue) {
+    const to = new Date(toValue + "T23:59:59");
+    if (dt > to) return false;
+  }
+  return true;
+}
+
+function normalizeRecords(rows) {
+  auditSummary.textFixesJ = 0;
+  auditSummary.textFixesL = 0;
+  auditSummary.textFixesW = 0;
+  auditSummary.importedRows = rows.length;
+  auditSummary.validPhotos = 0;
+  auditSummary.invalidPhotos = 0;
+  return rows.map(row => {
+    const rec = {
+      storeCode: normalizeText(row.storeCode).toUpperCase(),
+      baseStore: normalizeText(row.baseStore),
+      zone: normalizeText(row.zone),
+      rawDate: normalizeText(row.date),
+      date: formatDateDisplay(row.date),
+      store: normalizeText(row.store),
+      restaurantType: normalizeText(row.restaurantType),
+      otherType: normalizeText(row.otherType),
+      facadePhoto: normalizeText(row.facadePhoto),
+      contactReached: normalizeText(row.contactReached),
+      flyerDelivered: normalizeText(row.flyerDelivered),
+      flyerPhoto: normalizeText(row.flyerPhoto),
+      proposalUnderstood: normalizeText(row.proposalUnderstood),
+      competition: normalizeText(row.competition),
+      competitionMaterial: normalizeText(row.competitionMaterial),
+      compPhoto1: normalizeText(row.compPhoto1),
+      compPhoto2: normalizeText(row.compPhoto2),
+      compPhoto3: normalizeText(row.compPhoto3),
+      comments: normalizeText(row.comments)
+    };
+    auditTextColumns(rec);
+    rec.__tokens = {
+      competition: splitMulti(rec.competition),
+      competitionMaterial: splitMulti(rec.competitionMaterial)
+    };
+    return rec;
+  });
+}
+
+function isHC(code) {
+  return /^HC/i.test(normalizeText(code));
+}
+function isInvalidRestaurantType(value) {
+  const v = normalizeText(value).toLowerCase();
+  return v === "no existe";
+}
+
+function isNotFoundStore(value) {
+  const v = normalizeText(value).toLowerCase();
+  return v === "no se encuentra o no existe";
+}
+
+function getAnalyticalRows(rows) {
+  return rows.filter(row => 
+    !isNotFoundStore(row.store) &&
+    !isInvalidRestaurantType(row.restaurantType)
+  );
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values.filter(Boolean))].sort((a,b) => a.localeCompare(b, "es"));
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#39;");
+}
+
+function escapeJs(str) {
+  return String(str).replaceAll("\\","\\\\").replaceAll("'","\\'");
+}
+
+function populateSelects(data) {
+  filtersConfig.forEach(cfg => {
+    const select = document.getElementById(cfg.id);
+    const current = select.value || "";
+    const sourceData = cfg.field === "store"
+      ? data.filter(r => !isNotFoundStore(r.store))
+      : cfg.field === "restaurantType"
+      ? data.filter(r => !isInvalidRestaurantType(r.restaurantType))
+      : data;
+    const options = uniqueSorted(sourceData.map(r => r[cfg.field]));
+    select.innerHTML = `<option value="">Todos</option>` + options.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    select.value = options.includes(current) ? current : "";
+    select.onchange = () => renderDashboard();
+  });
+
+  const dateFrom = document.getElementById("filter-date-from");
+  const dateTo = document.getElementById("filter-date-to");
+  if (dateFrom && !dateFrom.dataset.bound) {
+    dateFrom.addEventListener("change", () => renderDashboard());
+    dateFrom.dataset.bound = "1";
+  }
+  if (dateTo && !dateTo.dataset.bound) {
+    dateTo.addEventListener("change", () => renderDashboard());
+    dateTo.dataset.bound = "1";
+  }
+}
+
+function getFilterSelections() {
+  const out = {};
+  filtersConfig.forEach(cfg => out[cfg.field] = document.getElementById(cfg.id).value || "");
+  out.__dateFrom = document.getElementById("filter-date-from").value || "";
+  out.__dateTo = document.getElementById("filter-date-to").value || "";
+  return out;
+}
+
+function rowMatches(row, selectFilters, chartFilters) {
+  const dateFrom = selectFilters.__dateFrom || "";
+  const dateTo = selectFilters.__dateTo || "";
+  if ((dateFrom || dateTo) && !dateInRange(row.rawDate || row.date, dateFrom, dateTo)) return false;
+
+  for (const [field, value] of Object.entries(selectFilters)) {
+    if (field.startsWith("__")) continue;
+    if (value && row[field] !== value) return false;
+  }
+  for (const [field, values] of Object.entries(chartFilters)) {
+    if (!values || values.size === 0) continue;
+    if (field === "competition" || field === "competitionMaterial") {
+      const tokens = row.__tokens[field] || [];
+      if (!tokens.some(token => values.has(token))) return false;
+    } else {
+      if (!values.has(row[field] || "Sin dato")) return false;
+    }
+  }
+  return true;
+}
+
+function getFilteredRows() {
+  const selectFilters = getFilterSelections();
+  return rawData.filter(row => rowMatches(row, selectFilters, activeFilters));
+}
+
+function getCounts(rows, field, multi) {
+  const counts = new Map();
+  rows.forEach(row => {
+    if (multi) {
+      const tokens = (row.__tokens[field] || []).filter(token => !shouldSkipChartValue(token));
+      tokens.forEach(token => counts.set(token, (counts.get(token) || 0) + 1));
+    } else {
+      const key = row[field] || "";
+      if (shouldSkipChartValue(key)) return;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+  });
+  return [...counts.entries()].sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"));
+}
+
+function formatPct(part, total) {
+  return total ? ((part/total)*100).toFixed(1) : "0.0";
+}
+
+function shouldSkipChartValue(value) {
+  const v = normalizeText(value).toLowerCase();
+  return !v || v === "sin dato" || v === "no existe";
+}
+
+function addFilter(field, value) {
+  if (!value) return;
+  if (!activeFilters[field]) activeFilters[field] = new Set();
+  if (activeFilters[field].has(value)) {
+    activeFilters[field].delete(value);
+    if (activeFilters[field].size === 0) delete activeFilters[field];
+  } else {
+    activeFilters[field].add(value);
+  }
+  renderDashboard();
+}
+
+function removeFilter(field, value) {
+  if (!activeFilters[field]) return;
+  activeFilters[field].delete(value);
+  if (activeFilters[field].size === 0) delete activeFilters[field];
+  renderDashboard();
+}
+
+function clearAllFilters() {
+  activeFilters = {};
+  filtersConfig.forEach(cfg => {
+    document.getElementById(cfg.id).value = "";
+  });
+  const dateFrom = document.getElementById("filter-date-from");
+  const dateTo = document.getElementById("filter-date-to");
+  if (dateFrom) dateFrom.value = "";
+  if (dateTo) dateTo.value = "";
+  renderDashboard();
+}
+
+function clearSelectFilter(id) {
+  document.getElementById(id).value = "";
+  renderDashboard();
+}
+
+function clearDateFilter(which) {
+  if (which === "from") document.getElementById("filter-date-from").value = "";
+  if (which === "to") document.getElementById("filter-date-to").value = "";
+  renderDashboard();
+}
+
+function renderActiveChips() {
+  const wrap = document.getElementById("active-filters");
+  const chips = [];
+  filtersConfig.forEach(cfg => {
+    const value = document.getElementById(cfg.id).value;
+    if (value) chips.push(`<span class="chip">${cfg.label}: ${escapeHtml(value)} <button onclick="clearSelectFilter('${cfg.id}')">×</button></span>`);
+  });
+  const dateFrom = document.getElementById("filter-date-from")?.value || "";
+  const dateTo = document.getElementById("filter-date-to")?.value || "";
+  if (dateFrom) chips.push(`<span class="chip">Fecha desde: ${escapeHtml(dateFrom)} <button onclick="clearDateFilter('from')">×</button></span>`);
+  if (dateTo) chips.push(`<span class="chip">Fecha hasta: ${escapeHtml(dateTo)} <button onclick="clearDateFilter('to')">×</button></span>`);
+
+  Object.entries(activeFilters).forEach(([field, values]) => {
+    [...values].forEach(value => {
+      chips.push(`<span class="chip">${prettyNames[field] || field}: ${escapeHtml(value)} <button onclick="removeFilter('${field}', '${escapeJs(value)}')">×</button></span>`);
+    });
+  });
+  wrap.innerHTML = chips.length ? chips.join("") : `<span style="font-size:13px;color:var(--muted);font-weight:600;">Sin filtros aplicados.</span>`;
+}
+
+function renderKPIs(rows) {
+  const missingCount = rows.filter(r => isNotFoundStore(r.store)).length;
+  document.getElementById("kpi-base").textContent = rows.filter(r => !isHC(r.storeCode) && !isNotFoundStore(r.store)).length;
+  document.getElementById("kpi-missing").textContent = missingCount;
+  document.getElementById("kpi-hc").textContent = rows.filter(r => isHC(r.storeCode) && !isNotFoundStore(r.store)).length;
+  document.getElementById("kpi-total").textContent = rows.length;
+}
+
+function buildChartsSkeleton() {
+  const grid = document.getElementById("charts-grid");
+  grid.innerHTML = chartConfigs.map(cfg => `
+    <article class="card chart-card">
+      <h3 class="chart-title">${escapeHtml(cfg.title)}</h3>
+      <div class="chart-base" id="base-${cfg.field}"></div>
+      <div class="chart-canvas-wrap">
+        <canvas id="chart-${cfg.field}"></canvas>
+      </div>
+      <div class="option-list" id="options-${cfg.field}"></div>
+      <div class="insight" id="insight-${cfg.field}"></div>
+    </article>
+  `).join("");
+}
+
+function buildInsight(field, counts, rowsLength) {
+  if (!counts.length || rowsLength === 0) {
+    return "<strong>Insight:</strong> No hay base suficiente para construir lectura en la selección actual.";
+  }
+
+  const [topLabel, topCount] = counts[0];
+  const second = counts[1];
+  const topPct = +formatPct(topCount, rowsLength);
+  const secondCount = second ? second[1] : 0;
+  const secondPct = second ? +formatPct(second[1], rowsLength) : 0;
+  const gap = +(topPct - secondPct).toFixed(1);
+  const coveredTop2 = +(topPct + secondPct).toFixed(1);
+
+  if (field === "restaurantType") {
+    if (topPct >= 45) {
+      return `<strong>Insight:</strong> El recorte se concentra principalmente en <strong>${escapeHtml(topLabel)}</strong>, que reúne <strong>${topCount} restaurantes</strong> y representa <strong>${topPct.toFixed(1)}%</strong> de la muestra. La segunda tipología aporta <strong>${secondCount}</strong> casos (<strong>${secondPct.toFixed(1)}%</strong>), por lo que la brecha entre ambas es de <strong>${gap} pp</strong>. En términos de lectura de campo, esto indica que la interpretación del relevamiento está condicionada por un mix claramente sesgado hacia la tipología líder.`;
+    }
+    return `<strong>Insight:</strong> La composición del universo relevado muestra una estructura relativamente diversificada: la categoría líder es <strong>${escapeHtml(topLabel)}</strong> con <strong>${topCount} casos</strong> (<strong>${topPct.toFixed(1)}%</strong>), seguida por <strong>${escapeHtml(second?.[0] || "Sin dato")}</strong> con <strong>${secondCount}</strong> (<strong>${secondPct.toFixed(1)}%</strong>). Las dos principales tipologías explican en conjunto <strong>${coveredTop2}%</strong> del total, lo que sugiere una muestra con variedad suficiente para comparar comportamientos entre formatos.`;
+  }
+
+  if (field === "contactReached") {
+    const noCount = counts.find(([k]) => /^no$/i.test(k))?.[1] || 0;
+    const noPct = +formatPct(noCount, rowsLength);
+    if (/^si$/i.test(topLabel)) {
+      return `<strong>Insight:</strong> El acceso a un responsable aparece consolidado en este corte: <strong>${topCount} visitas</strong> lograron contacto efectivo, equivalentes a <strong>${topPct.toFixed(1)}%</strong> del total relevado. El no contacto representa <strong>${noCount} casos</strong> (<strong>${noPct.toFixed(1)}%</strong>), por lo que la diferencia a favor del contacto efectivo asciende a <strong>${(topPct - noPct).toFixed(1)} pp</strong>. Esto mejora la calidad potencial de la interacción comercial y la profundidad del relevamiento.`;
+    }
+    return `<strong>Insight:</strong> El principal cuello de botella del recorte está en el acceso al interlocutor adecuado: <strong>${topCount} visitas</strong> no lograron hablar con un responsable, lo que equivale a <strong>${topPct.toFixed(1)}%</strong> del total. La tasa de contacto efectivo se ubica por detrás, lo que sugiere una fricción operativa relevante para la ejecución comercial en terreno.`;
+  }
+
+  if (field === "flyerDelivered") {
+    const yesCount = counts.find(([k]) => /^si$/i.test(k))?.[1] || 0;
+    const yesPct = +formatPct(yesCount, rowsLength);
+    const noCount = counts.find(([k]) => /^no$/i.test(k))?.[1] || 0;
+    const noPct = +formatPct(noCount, rowsLength);
+    if (yesPct >= 75) {
+      return `<strong>Insight:</strong> La entrega de flyer muestra un nivel de ejecución alto y consistente: <strong>${yesCount} restaurantes</strong> recibieron material, lo que representa <strong>${yesPct.toFixed(1)}%</strong> del recorte. Los casos sin entrega suman <strong>${noCount}</strong> (<strong>${noPct.toFixed(1)}%</strong>), dejando una brecha positiva de <strong>${(yesPct - noPct).toFixed(1)} pp</strong>. Desde una lógica de agencia, el hallazgo sugiere buena disciplina de implementación, aunque todavía queda una franja menor por capturar.`;
+    }
+    return `<strong>Insight:</strong> La entrega de flyer no alcanza todavía un estándar robusto de cobertura: el “sí” reúne <strong>${yesCount} casos</strong> (<strong>${yesPct.toFixed(1)}%</strong>) frente a <strong>${noCount}</strong> no entregas (<strong>${noPct.toFixed(1)}%</strong>). Aunque la ejecución positiva lidera, la distancia efectiva todavía es acotada para un material que debería funcionar como básico operativo.`;
+  }
+
+  if (field === "proposalUnderstood") {
+    const yesCount = counts.find(([k]) => /^si$/i.test(k))?.[1] || 0;
+    const yesPct = +formatPct(yesCount, rowsLength);
+    const noCount = counts.find(([k]) => /^no$/i.test(k))?.[1] || 0;
+    const noPct = +formatPct(noCount, rowsLength);
+    if (yesPct >= 70) {
+      return `<strong>Insight:</strong> La propuesta se está transmitiendo con claridad en la mayoría de los casos: <strong>${yesCount} restaurantes</strong> declaran haberla entendido, equivalentes a <strong>${yesPct.toFixed(1)}%</strong> del total. El grupo que no la comprende representa <strong>${noCount}</strong> casos (<strong>${noPct.toFixed(1)}%</strong>), lo que deja una diferencia de <strong>${(yesPct - noPct).toFixed(1)} pp</strong>. Esto sugiere que el problema principal no parece estar en el mensaje base, sino en su consistencia de ejecución.`;
+    }
+    return `<strong>Insight:</strong> El entendimiento de la propuesta aparece tensionado en este corte: aunque la opción líder es <strong>${escapeHtml(topLabel)}</strong> con <strong>${topCount}</strong> casos (<strong>${topPct.toFixed(1)}%</strong>), la distancia frente a la segunda respuesta es de apenas <strong>${gap} pp</strong>. En términos cualitativos, el mensaje todavía no logra instalarse con suficiente nitidez de forma homogénea.`;
+  }
+
+  if (field === "competition") {
+    if (topPct < 35) {
+      return `<strong>Insight:</strong> El escenario competitivo aparece fragmentado: la referencia más mencionada es <strong>${escapeHtml(topLabel)}</strong> con <strong>${topCount} menciones</strong> (<strong>${topPct.toFixed(1)}%</strong>), seguida por <strong>${escapeHtml(second?.[0] || "Sin dato")}</strong> con <strong>${secondCount}</strong> (<strong>${secondPct.toFixed(1)}%</strong>). La baja distancia entre opciones y un top 2 de <strong>${coveredTop2}%</strong> sugieren un mapa competitivo disperso, sin un único jugador monopolizando la comparación mental del punto de venta.`;
+    }
+    return `<strong>Insight:</strong> La competencia líder en la mente del punto de venta es <strong>${escapeHtml(topLabel)}</strong>, con <strong>${topCount} menciones</strong> y una participación de <strong>${topPct.toFixed(1)}%</strong> sobre la base relevada. La segunda marca queda en <strong>${secondPct.toFixed(1)}%</strong>, por lo que la ventaja de la referencia principal asciende a <strong>${gap} pp</strong>. Esto posiciona a la marca líder como benchmark prioritario para la respuesta comercial y visual.`;
+  }
+
+  if (field === "competitionMaterial") {
+    const noCount = counts.find(([k]) => /^no$/i.test(k))?.[1] || 0;
+    const noPct = +formatPct(noCount, rowsLength);
+    const yesCount = rowsLength - noCount;
+    const yesPct = +(100 - noPct).toFixed(1);
+    if (/^no$/i.test(topLabel)) {
+      return `<strong>Insight:</strong> La ausencia de material visible de la competencia domina el recorte: <strong>${noCount} restaurantes</strong> no exhiben piezas competitivas, lo que representa <strong>${noPct.toFixed(1)}%</strong> del total. La presencia de material se observa en <strong>${yesCount}</strong> casos (<strong>${yesPct.toFixed(1)}%</strong>), habilitando una ventana concreta para ganar share of visibility con despliegue táctico de materiales en PDV.`;
+    }
+    return `<strong>Insight:</strong> La presión visual de la competencia ya es tangible en el punto de venta: la presencia de material competitivo lidera con <strong>${topCount} casos</strong> y <strong>${topPct.toFixed(1)}%</strong> de participación. La ausencia de material queda por detrás, lo que confirma que la batalla no es solo comercial sino también de visibilidad y recordación en el entorno físico.`;
+  }
+
+  return `<strong>Insight:</strong> La opción líder es <strong>${escapeHtml(topLabel)}</strong> con <strong>${topCount}</strong> casos (<strong>${topPct.toFixed(1)}%</strong>). La segunda alternativa alcanza <strong>${secondCount}</strong> registros (<strong>${secondPct.toFixed(1)}%</strong>), por lo que la diferencia entre ambas es de <strong>${gap} pp</strong>.`;
+}
+
+function renderChartCard(cfg, rows) {
+  const counts = getCounts(rows, cfg.field, cfg.multi);
+  document.getElementById(`base-${cfg.field}`).textContent = cfg.multi
+    ? `Base analítica: ${rows.length} restaurantes relevados · respuestas multiselección`
+    : `Base analítica: ${rows.length} restaurantes relevados`;
+
+  const labels = counts.map(([label]) => label);
+  const data = counts.map(([,value]) => value);
+  const totalForChart = data.reduce((a,b) => a+b, 0);
+  const canvas = document.getElementById(`chart-${cfg.field}`);
+
+  if (charts[cfg.field]) charts[cfg.field].destroy();
+
+  if (!counts.length) {
+    document.getElementById(`options-${cfg.field}`).innerHTML = `<div style="font-size:13px;color:var(--muted)">Sin base analítica disponible para la selección actual.</div>`;
+    document.getElementById(`insight-${cfg.field}`).innerHTML = "<strong>Insight:</strong> No hay base suficiente para construir lectura en la selección actual.";
+    return;
+  }
+
+  charts[cfg.field] = new Chart(canvas, {
+    type: "doughnut",
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: labels.map((_,i) => palette[i % palette.length]),
+        borderColor: "#ffffff",
+        borderWidth: 3,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      cutout: "56%",
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const value = ctx.raw || 0;
+              const pct = totalForChart ? ((value/totalForChart)*100).toFixed(1) : "0.0";
+              return `${ctx.label}: ${value} respuestas · ${pct}%`;
+            }
+          }
+        }
+      },
+      onClick: (_, elements) => {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        addFilter(cfg.field, labels[idx]);
+      }
+    }
+  });
+
+  document.getElementById(`options-${cfg.field}`).innerHTML = counts.map(([label, value], idx) => {
+    const pct = totalForChart ? ((value / totalForChart)*100).toFixed(1) : "0.0";
+    const active = activeFilters[cfg.field] && activeFilters[cfg.field].has(label);
+    return `
+      <div class="option-item ${active ? "active" : ""}" onclick="addFilter('${cfg.field}', '${escapeJs(label)}')">
+        <div class="option-main">
+          <span class="dot" style="background:${palette[idx % palette.length]}"></span>
+          <span class="option-label">${escapeHtml(label)}</span>
+        </div>
+        <div class="option-metrics">${value} respuestas · ${pct}%</div>
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById(`insight-${cfg.field}`).innerHTML = buildInsight(cfg.field, counts, rows.length);
+}
+
+
+function resetPhotoCounters(expectedTotal = 0) {
+  auditSummary.validPhotos = expectedTotal;
+  auditSummary.invalidPhotos = 0;
+}
+
+function handlePhotoLoad(img) {
+  auditPhotoOrientation(img);
+}
+
+function handlePhotoError(img) {
+  const card = img.closest(".photo-card");
+  if (!card) return;
+  auditSummary.invalidPhotos += 1;
+  auditSummary.validPhotos = Math.max(0, auditSummary.validPhotos - 1);
+  const track = document.getElementById("photos-track");
+  card.remove();
+
+  if (track && !track.querySelector(".photo-card")) {
+    track.innerHTML = `<div style="padding:18px;color:var(--muted);font-weight:600;">No hay fotos válidas disponibles para la selección actual.</div>`;
+  }
+  renderAuditSummary();
+}
+
+function buildPhotoPool(rows) {
+  const photos = [];
+  rows.forEach(row => {
+    [
+      {url: row.facadePhoto, source: "M"},
+      {url: row.flyerPhoto, source: "P"},
+      {url: row.compPhoto1, source: "T"},
+      {url: row.compPhoto2, source: "U"},
+      {url: row.compPhoto3, source: "V"}
+    ].forEach(item => {
+      if (isPhoto(item.url) && !isPhotoHidden(item.url)) {
+        photos.push({
+          url: item.url,
+          source: item.source,
+          store: row.store || "Sin tienda",
+          date: row.date || "Sin fecha"
+        });
+      }
+    });
+  });
+  return photos;
+}
+
+function renderCarousel(rows) {
+  const track = document.getElementById("photos-track");
+  const photos = buildPhotoPool(rows);
+  resetPhotoCounters(photos.length);
+
+  if (!photos.length) {
+    track.innerHTML = `<div style="padding:18px;color:var(--muted);font-weight:600;">No hay fotos disponibles para la selección actual.</div>`;
+    renderAuditSummary();
+    return;
+  }
+
+  track.innerHTML = photos.map(photo => `
+    <div class="photo-card" data-source="${photo.source}" onclick="openLightbox('${escapeJs(photo.url)}', '${escapeJs(photo.store)}', '${escapeJs(photo.date)}')">
+      <div class="photo-inner">
+        <img src="${escapeHtml(photo.url)}"
+             alt="Foto de ${escapeHtml(photo.store)}"
+             loading="lazy"
+             data-photo-url="${escapeHtml(photo.url)}"
+             onload="handlePhotoLoad(this)"
+             onerror="handlePhotoError(this)" />
+      </div>
+      <div class="photo-overlay">
+        <div class="photo-title">${escapeHtml(photo.store)}</div>
+        <div class="photo-meta">${escapeHtml(photo.date)} · Columna ${photo.source}</div>
+      </div>
+    </div>
+  `).join("");
+
+  track.scrollTo({ left: 0, behavior: "auto" });
+  renderAuditSummary();
+}
+
+function applySavedRotationToCard(card, url) {
+  card.classList.remove("manual-rot-90","manual-rot-180","manual-rot-270");
+  const cls = rotationClass(url);
+  if (cls) card.classList.add(cls);
+}
+
+function applySavedRotationToLightbox(url) {
+  const img = document.getElementById("lightbox-image");
+  img.classList.remove("manual-rot-90","manual-rot-180","manual-rot-270");
+  const cls = rotationClass(url);
+  if (cls) img.classList.add(cls);
+}
+
+function auditPhotoOrientation(img) {
+  const card = img.closest(".photo-card");
+  if (!card) return;
+  const url = img.getAttribute("data-photo-url") || img.currentSrc || img.src || "";
+  applySavedRotationToCard(card, url);
+}
+
+function renderConclusion(rows) {
+  const total = rows.length;
+  if (!total) {
+    document.getElementById("general-conclusion").innerHTML = "No hay observaciones disponibles para la selección actual. Conviene ampliar o limpiar filtros para recuperar base analítica.";
+    return;
+  }
+  const flyers = getCounts(rows, "flyerDelivered", false);
+  const comp = getCounts(rows, "competition", true);
+  const material = getCounts(rows, "competitionMaterial", true);
+  const type = getCounts(rows, "restaurantType", false);
+  const yesFlyer = flyers.find(([k]) => k === "Si")?.[1] || 0;
+  const noCompVisible = material.find(([k]) => k === "No")?.[1] || 0;
+  const topComp = comp[0]?.[0] || "Sin dato";
+  const topType = type[0]?.[0] || "Sin dato";
+  document.getElementById("general-conclusion").innerHTML = `
+    Sobre <strong>${total}</strong> restaurantes relevados en el recorte analizado, la muestra se apoya principalmente en <strong>${escapeHtml(topType)}</strong>. La entrega de flyer alcanza <strong>${formatPct(yesFlyer, total)}%</strong> del total relevado, mientras que la principal referencia competitiva observada es <strong>${escapeHtml(topComp)}</strong>. En paralelo, <strong>${formatPct(noCompVisible, total)}%</strong> de la muestra no exhibe material visible de la competencia, señal que abre una oportunidad táctica para ganar presencia en punto de venta con ejecución consistente y foco en conversión.
+  `;
+}
+
+function renderAuditSummary() {
+  const el = document.getElementById("audit-list");
+  el.innerHTML = `
+    <div class="audit-row"><strong>Filas importadas:</strong> ${auditSummary.importedRows}</div>
+    <div class="audit-row"><strong>Columna J auditada:</strong> ${auditSummary.textFixesJ} registros normalizados</div>
+    <div class="audit-row"><strong>Columna L auditada:</strong> ${auditSummary.textFixesL} registros normalizados</div>
+    <div class="audit-row"><strong>Columna W auditada:</strong> ${auditSummary.textFixesW} registros normalizados</div>
+    <div class="audit-row"><strong>Fotos revisadas:</strong> columnas ${auditSummary.photoColumnsReviewed} con corrección visual automática de orientación en el dashboard.</div>\n    <div class="audit-row"><strong>Fotos válidas cargadas:</strong> ${auditSummary.validPhotos}</div>\n    <div class="audit-row"><strong>Fotos descartadas por error o link inválido:</strong> ${auditSummary.invalidPhotos}</div>
+  `;
+}
+
+function renderDashboard() {
+  populateSelects(rawData);
+  const rows = getFilteredRows();
+  renderKPIs(rows);
+  renderActiveChips();
+  chartConfigs.forEach(cfg => renderChartCard(cfg, rows));
+  renderCarousel(rows);
+  renderConclusion(rows);
+  renderAuditSummary();
+}
+
+
+function syncCardRotationByUrl(url) {
+  document.querySelectorAll('.photo-card img').forEach(img => {
+    const imgUrl = img.getAttribute("data-photo-url") || img.currentSrc || img.src || "";
+    if (imgUrl === url) {
+      const card = img.closest(".photo-card");
+      if (card) applySavedRotationToCard(card, url);
+    }
+  });
+}
+
+function openLightbox(url, store, date) {
+  const lb = document.getElementById("lightbox");
+  currentLightboxUrl = url;
+  const img = document.getElementById("lightbox-image");
+  img.src = url;
+  img.classList.remove("manual-rot-90","manual-rot-180","manual-rot-270");
+  applySavedRotationToLightbox(url);
+  document.getElementById("lightbox-title").textContent = `${store} · ${date}`;
+  document.getElementById("open-original").href = url;
+  lb.classList.remove("hidden");
+}
+
+function rotateCurrentPhoto() {
+  if (!currentLightboxUrl) return;
+  const current = getSavedRotation(currentLightboxUrl);
+  const next = current === 270 ? 0 : current + 90;
+  saveRotation(currentLightboxUrl, next);
+  applySavedRotationToLightbox(currentLightboxUrl);
+  syncCardRotationByUrl(currentLightboxUrl);
+}
+
+function hideCurrentPhoto() {
+  if (!currentLightboxUrl) return;
+  setPhotoHidden(currentLightboxUrl, true);
+  closeLightbox();
+  renderDashboard();
+}
+
+function closeLightbox() {
+  document.getElementById("lightbox").classList.add("hidden");
+  document.getElementById("lightbox-image").src = "";
+  document.getElementById("lightbox-image").classList.remove("manual-rot-90","manual-rot-180","manual-rot-270");
+  currentLightboxUrl = "";
+}
+
+function downloadPhoto(url, filename = "foto") {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function sanitizeFilePart(value) {
+  return normalizeText(value)
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, "_")
+    .slice(0, 60) || "foto";
+}
+
+function downloadCurrentPhoto() {
+  if (!currentLightboxUrl) return;
+  const title = document.getElementById("lightbox-title").textContent || "foto";
+  downloadPhoto(currentLightboxUrl, sanitizeFilePart(title) + ".jpg");
+}
+
+function downloadAllVisiblePhotos() {
+  const rows = getAnalyticalRows(getFilteredRows());
+  const photos = buildPhotoPool(rows);
+  if (!photos.length) {
+    alert("No hay fotos visibles para descargar.");
+    return;
+  }
+  photos.forEach((photo, idx) => {
+    setTimeout(() => {
+      const name = `${String(idx + 1).padStart(2, "0")}_${sanitizeFilePart(photo.store)}_${photo.source}.jpg`;
+      downloadPhoto(photo.url, name);
+    }, idx * 250);
+  });
+}
+
+async function processWorkbook(file) {
+  await uploadExcelToServer(file);
+}
+
+document.getElementById("clear-all").addEventListener("click", clearAllFilters);
+document.getElementById("photos-prev").addEventListener("click", () => {
+  document.getElementById("photos-track").scrollBy({ left: -420, behavior: "smooth" });
+});
+document.getElementById("photos-next").addEventListener("click", () => {
+  document.getElementById("photos-track").scrollBy({ left: 420, behavior: "smooth" });
+});
+document.getElementById("admin-fab").addEventListener("click", () => {
+  document.getElementById("admin-drawer").classList.toggle("hidden");
+});
+document.getElementById("upload-btn").addEventListener("click", () => {
+  document.getElementById("excel-input").click();
+});
+document.getElementById("excel-input").addEventListener("change", async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  try {
+    await processWorkbook(file);
+    alert("Dashboard actualizado correctamente.");
+  } catch (err) {
+    alert("No se pudo actualizar el dashboard.");
+  } finally {
+    e.target.value = "";
+  }
+});
+document.getElementById("download-photo").addEventListener("click", (e) => { e.stopPropagation(); downloadCurrentPhoto(); });
+document.getElementById("rotate-photo").addEventListener("click", (e) => { e.stopPropagation(); rotateCurrentPhoto(); });
+document.getElementById("hide-photo").addEventListener("click", (e) => { e.stopPropagation(); hideCurrentPhoto(); });
+document.getElementById("close-lightbox").addEventListener("click", (e) => { e.stopPropagation(); closeLightbox(); });
+document.getElementById("download-all-photos").addEventListener("click", () => downloadAllVisiblePhotos());
+document.getElementById("lightbox").addEventListener("click", (e) => {
+  if (e.target.id === "lightbox") closeLightbox();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeLightbox();
+});
+
+buildChartsSkeleton();
+loadServerData().then(() => renderDashboard());
+</script>
+</body>
+</html>
